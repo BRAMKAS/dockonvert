@@ -11,14 +11,6 @@ export default function DocsPage() {
           url: "/openapi.json",
           theme: "kepler",
           layout: "modern",
-          hideModels: false,
-          hideDownloadButton: false,
-          metadata: {
-            title: "DocKonvert API Reference",
-          },
-          authentication: {
-            preferredSecurityScheme: "apiKey",
-          },
         }}
       />
     </div>
