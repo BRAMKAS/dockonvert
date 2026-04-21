@@ -18,9 +18,6 @@ export default function DocsPage() {
           },
           authentication: {
             preferredSecurityScheme: "apiKey",
-            apiKey: {
-              token: "",
-            },
           },
         }}
       />
