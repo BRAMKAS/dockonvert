@@ -186,7 +186,7 @@ export default function JobBuilderPage() {
             <CardContent className="space-y-3">
               <div>
                 <Label>Output Format</Label>
-                <Select value={outputFormat} onValueChange={setOutputFormat}>
+                <Select value={outputFormat} onValueChange={(v) => v && setOutputFormat(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {OUTPUT_FORMATS.map((f) => (
@@ -201,7 +201,7 @@ export default function JobBuilderPage() {
               </div>
               <div>
                 <Label>Table Extraction</Label>
-                <Select value={tableMode} onValueChange={setTableMode}>
+                <Select value={tableMode} onValueChange={(v) => v && setTableMode(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="accurate">Accurate (slower)</SelectItem>
@@ -212,7 +212,7 @@ export default function JobBuilderPage() {
               {outputFormat === "pdf" && (
                 <div>
                   <Label>Page Size</Label>
-                  <Select value={pageSize} onValueChange={setPageSize}>
+                  <Select value={pageSize} onValueChange={(v) => v && setPageSize(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="A4">A4</SelectItem>
