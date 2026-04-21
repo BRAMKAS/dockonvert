@@ -1,0 +1,12 @@
+name = "dockonvert-local"
+compatibility_date = "2024-12-01"
+main = "src/index.ts"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dockonvert-db"
+database_id = "local-dev-db"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "dockonvert-files"

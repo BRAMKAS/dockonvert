@@ -1,0 +1,13 @@
+{
+  "name": "miniflare-local",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --port 8788 --local --persist-to .wrangler/state",
+    "db:init": "wrangler d1 execute dockonvert-db --local --file=../db/schema.sql --persist-to .wrangler/state",
+    "db:reset": "rm -rf .wrangler/state && npm run db:init"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241205.0",
+    "wrangler": "^4.0.0"
+  }
+}

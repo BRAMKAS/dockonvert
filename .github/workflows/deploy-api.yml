@@ -1,0 +1,96 @@
+name: Deploy API to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch: # Manual trigger
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: dockonvert-api
+  IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dockonvert/api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Create Artifact Registry (if not exists)
+        run: |
+          gcloud artifacts repositories describe dockonvert \
+            --location=${{ env.REGION }} 2>/dev/null || \
+          gcloud artifacts repositories create dockonvert \
+            --repository-format=docker \
+            --location=${{ env.REGION }} \
+            --description="DocKonvert container images"
+
+      - name: Build and push Docker image
+        run: |
+          docker build \
+            -f apps/api/Dockerfile \
+            -t ${{ env.IMAGE }}:${{ github.sha }} \
+            -t ${{ env.IMAGE }}:latest \
+            .
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.IMAGE }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --memory 2Gi \
+            --cpu 2 \
+            --timeout 300 \
+            --max-instances 10 \
+            --min-instances 0 \
+            --allow-unauthenticated \
+            --set-env-vars "\
+          APP_ENV=production,\
+          APP_SECRET_KEY=${{ secrets.APP_SECRET_KEY }},\
+          CORS_ORIGINS=${{ secrets.CORS_ORIGINS }},\
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }},\
+          R2_ACCOUNT_ID=${{ secrets.R2_ACCOUNT_ID }},\
+          R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }},\
+          R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }},\
+          R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }},\
+          R2_ENDPOINT=${{ secrets.R2_ENDPOINT }},\
+          CF_API_TOKEN=${{ secrets.CF_API_TOKEN }},\
+          CF_ACCOUNT_ID=${{ secrets.CF_ACCOUNT_ID }},\
+          D1_DATABASE_ID=${{ secrets.D1_DATABASE_ID }},\
+          RATE_LIMIT_PER_HOUR=100,\
+          MAX_FILE_SIZE_MB=10,\
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }},\
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}"
+
+      - name: Show deployment URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)')
+          echo "🚀 API deployed to: $URL"
+          echo "📖 Swagger docs: $URL/api/docs"

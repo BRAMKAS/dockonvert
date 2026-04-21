@@ -1,0 +1,603 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DocKonvert API",
+    "version": "0.1.0",
+    "description": "Convert any document to Markdown or PDF via a simple REST API. Powered by Docling.\n\n## Authentication\nAll API requests require an API key passed via the `X-API-Key` header.\n\n```\nX-API-Key: dk_your_api_key\n```\n\nGet your free API key by [creating an account](https://dockonvert.com/register).\n\n## Rate Limits\n- **Free tier**: 100 requests per hour\n- **Max file size**: 10MB\n\nRate limit headers are included in every response:\n```\nX-RateLimit-Limit: 100\nX-RateLimit-Remaining: 99\nX-RateLimit-Reset: 1700000000\n```\n\n## Document Retention\nDocuments are retained for 24 hours for download purposes, then automatically and permanently purged.",
+    "contact": {
+      "name": "BRAMKAS INC",
+      "url": "https://www.bramkas.com",
+      "email": "hello@bramkas.com"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://dockonvert.com/terms"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8009/api",
+      "description": "Local Development"
+    },
+    {
+      "url": "https://api.dockonvert.com/api",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    { "name": "Conversion", "description": "Simple synchronous document conversion" },
+    { "name": "Jobs", "description": "Async conversion jobs with import → convert → export pipelines" },
+    { "name": "Auth", "description": "User registration, login, and API key management" },
+    { "name": "Documents", "description": "View conversion history and manage documents" },
+    { "name": "Health", "description": "Service health checks" }
+  ],
+  "paths": {
+    "/v1/convert/markdown": {
+      "post": {
+        "operationId": "convertToMarkdown",
+        "summary": "Convert to Markdown",
+        "description": "Convert a document to Markdown using Docling. Supports PDF, DOCX, PPTX, XLSX, HTML, images (PNG, JPG, WebP), CSV, and TXT.",
+        "tags": ["Conversion"],
+        "security": [{ "apiKey": [] }, { "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The document file to convert (max 10MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversion successful",
+            "content": {
+              "text/markdown": {
+                "schema": { "type": "string" }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": { "type": "string" },
+                "description": "attachment; filename=\"document.md\""
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "413": { "$ref": "#/components/responses/FileTooLarge" },
+          "415": { "$ref": "#/components/responses/UnsupportedType" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ConversionFailed" }
+        }
+      }
+    },
+    "/v1/convert/pdf": {
+      "post": {
+        "operationId": "convertToPdf",
+        "summary": "Convert to PDF",
+        "description": "Convert a document to PDF with preserved formatting. Supports DOCX, DOC, HTML, TXT, and Markdown.",
+        "tags": ["Conversion"],
+        "security": [{ "apiKey": [] }, { "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The document file to convert (max 10MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversion successful",
+            "content": {
+              "application/pdf": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": { "type": "string" },
+                "description": "attachment; filename=\"document.pdf\""
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "413": { "$ref": "#/components/responses/FileTooLarge" },
+          "415": { "$ref": "#/components/responses/UnsupportedType" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ConversionFailed" }
+        }
+      }
+    },
+    "/v1/jobs": {
+      "post": {
+        "operationId": "createJob",
+        "summary": "Create a conversion job",
+        "description": "Create an async job with import/convert/export pipeline. Supports URL import, 5 output formats, webhooks, and S3 export.",
+        "tags": ["Jobs"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["tasks"], "properties": { "tasks": { "type": "object" }, "webhook": { "type": "object" }, "tag": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Job created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Job" } } } } }
+      },
+      "get": {
+        "operationId": "listJobs",
+        "summary": "List jobs",
+        "tags": ["Jobs"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "tag", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } }
+        ],
+        "responses": { "200": { "description": "List of jobs", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Job" } } } } } }
+      }
+    },
+    "/v1/jobs/upload": {
+      "post": {
+        "operationId": "createUploadJob",
+        "summary": "Create job with file upload",
+        "description": "Upload a file and specify output format. Auto-creates import/convert/export pipeline.",
+        "tags": ["Jobs"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["file", "output_format"], "properties": { "file": { "type": "string", "format": "binary" }, "output_format": { "type": "string", "enum": ["markdown", "pdf", "html", "txt", "docx"] }, "options": { "type": "string" }, "webhook_url": { "type": "string" }, "tag": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Job created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Job" } } } } }
+      }
+    },
+    "/v1/jobs/{jobId}": {
+      "get": {
+        "operationId": "getJob", "summary": "Get job status", "tags": ["Jobs"], "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Job details" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "operationId": "deleteJob", "summary": "Delete a job", "tags": ["Jobs"], "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/v1/jobs/{jobId}/download": {
+      "get": {
+        "operationId": "downloadJobResult", "summary": "Download job output", "tags": ["Jobs"], "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "task", "in": "query", "schema": { "type": "string", "default": "convert" } }
+        ],
+        "responses": { "200": { "description": "File download" }, "400": { "description": "Not completed" } }
+      }
+    },
+    "/v1/documents": {
+      "get": {
+        "operationId": "listDocuments",
+        "summary": "List conversion history",
+        "description": "Returns the user's document conversion history. Documents are automatically purged after 24 hours.",
+        "tags": ["Documents"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "documents": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Document" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "register",
+        "summary": "Register a new account",
+        "description": "Create a new user account and receive a JWT token and API key. The API key is shown only once.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "400": { "description": "Validation error (terms not accepted, password too short)" },
+          "409": { "description": "Email already registered" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Sign in",
+        "description": "Authenticate with email and password. Returns a JWT token.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "401": { "description": "Invalid email or password" },
+          "403": { "description": "Email not verified" }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "operationId": "forgotPassword",
+        "summary": "Request password reset",
+        "description": "Send a password reset link to the user's email. Always returns success to prevent email enumeration.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset link sent (if email exists)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "resetPassword",
+        "summary": "Reset password",
+        "description": "Reset password using a token from the reset email.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "password"],
+                "properties": {
+                  "token": { "type": "string" },
+                  "password": { "type": "string", "minLength": 8 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password reset successfully" },
+          "400": { "description": "Invalid or expired token" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "Get current user",
+        "description": "Returns the authenticated user's profile.",
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/api-keys": {
+      "get": {
+        "operationId": "listApiKeys",
+        "summary": "List API keys",
+        "description": "Returns the user's API keys (prefix only, never the full key).",
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "keys": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ApiKey" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/api-keys/regenerate": {
+      "post": {
+        "operationId": "regenerateApiKey",
+        "summary": "Regenerate API key",
+        "description": "Deactivates all existing keys and generates a new one. The new key is returned once and cannot be retrieved again.",
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "New API key generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "api_key": { "type": "string", "description": "The full API key (shown once)" },
+                    "key_prefix": { "type": "string", "description": "First 11 characters for display" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "summary": "Health check",
+        "description": "Returns the service status and version.",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "healthy" },
+                    "service": { "type": "string", "example": "dockonvert-api" },
+                    "version": { "type": "string", "example": "0.1.0" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for conversion endpoints. Get one by registering at /auth/register."
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token from /auth/login or /auth/register."
+      }
+    },
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["name", "email", "password", "accepted_terms"],
+        "properties": {
+          "name": { "type": "string", "example": "Jane Doe" },
+          "email": { "type": "string", "format": "email", "example": "jane@example.com" },
+          "password": { "type": "string", "minLength": 8, "example": "securepass123" },
+          "accepted_terms": { "type": "boolean", "example": true }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string", "description": "JWT access token" },
+          "user": { "$ref": "#/components/schemas/User" },
+          "api_key": { "type": "string", "nullable": true, "description": "API key (only on registration)" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string" },
+          "email_verified": { "type": "integer", "enum": [0, 1] }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "key_prefix": { "type": "string", "example": "dk_abc12345" },
+          "name": { "type": "string", "example": "Default" },
+          "is_active": { "type": "integer", "enum": [0, 1] },
+          "last_used_at": { "type": "string", "nullable": true, "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "processing", "completed", "failed"] },
+          "tag": { "type": "string", "nullable": true },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "operation": { "type": "string" },
+                "status": { "type": "string" },
+                "result": { "type": "object", "nullable": true },
+                "error": { "type": "string", "nullable": true }
+              }
+            }
+          },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time", "nullable": true },
+          "download_url": { "type": "string", "nullable": true }
+        }
+      },
+      "ConversionOptions": {
+        "type": "object",
+        "properties": {
+          "ocr": { "type": "boolean", "default": true, "description": "Enable OCR for scanned documents" },
+          "table_mode": { "type": "string", "enum": ["fast", "accurate"], "default": "accurate" },
+          "include_images": { "type": "boolean", "default": true },
+          "page_range": { "type": "string", "description": "e.g. '1-5' or '1,3,5'" },
+          "quality": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "pdf_page_size": { "type": "string", "enum": ["A4", "Letter", "Legal"], "default": "A4" },
+          "pdf_margin": { "type": "string", "default": "40px" }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "input_filename": { "type": "string" },
+          "input_content_type": { "type": "string" },
+          "input_size_bytes": { "type": "integer" },
+          "output_filename": { "type": "string", "nullable": true },
+          "output_content_type": { "type": "string", "nullable": true },
+          "output_size_bytes": { "type": "integer", "nullable": true },
+          "conversion_type": { "type": "string", "enum": ["to_markdown", "to_pdf"] },
+          "status": { "type": "string", "enum": ["pending", "processing", "completed", "failed"] },
+          "error_message": { "type": "string", "nullable": true },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid API key / token",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "detail": "API key or Bearer token required." }
+          }
+        }
+      },
+      "FileTooLarge": {
+        "description": "File exceeds size limit",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "detail": "File exceeds 10MB limit." }
+          }
+        }
+      },
+      "UnsupportedType": {
+        "description": "Unsupported file type",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "detail": "Unsupported file type: application/zip" }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "detail": "Rate limit exceeded. Try again in 60 seconds." }
+          }
+        }
+      },
+      "ConversionFailed": {
+        "description": "Conversion failed",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "detail": "Conversion failed: unable to parse document" }
+          }
+        }
+      }
+    }
+  }
+}

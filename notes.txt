@@ -1,0 +1,1 @@
+also generate API documentation in this format: https://docs.shipstation.com/openapi

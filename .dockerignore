@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+*.log
+apps/web/node_modules
+apps/web/.next
+apps/web/.git
+__pycache__
+*.pyc
+.env*.local
