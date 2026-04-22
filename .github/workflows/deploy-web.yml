@@ -1,20 +1,15 @@
 name: Deploy Web to Cloudflare Pages
 
+# NOTE: This workflow is a backup. The primary deploy method is
+# Cloudflare Pages Git integration (auto-deploys on push).
+# Set up at: https://dash.cloudflare.com → Pages → dockonvert → Settings → Builds
+
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/web/**"
-      - "packages/shared/**"
-      - ".github/workflows/deploy-web.yml"
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch: # Manual trigger only
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
 
     steps:
       - uses: actions/checkout@v4
@@ -41,4 +36,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/web/.next --project-name=dockonvert
+          command: pages deploy apps/web/.next/static --project-name=dockonvert
