@@ -3,7 +3,7 @@
   "info": {
     "title": "DocKonvert API",
     "version": "0.1.0",
-    "description": "Convert any document to Markdown or PDF via a simple REST API. Powered by Docling.\n\n## Authentication\nAll API requests require an API key passed via the `X-API-Key` header.\n\n```\nX-API-Key: dk_your_api_key\n```\n\nGet your free API key by [creating an account](https://dockonvert.com/register).\n\n## Rate Limits\n- **Free tier**: 100 requests per hour\n- **Max file size**: 10MB\n\nRate limit headers are included in every response:\n```\nX-RateLimit-Limit: 100\nX-RateLimit-Remaining: 99\nX-RateLimit-Reset: 1700000000\n```\n\n## Document Retention\nDocuments are retained for 24 hours for download purposes, then automatically and permanently purged.",
+    "description": "Convert any document to any format via a simple REST API. Powered by Docling.\n\n## Authentication\nAll API requests require an API key passed via the `X-API-Key` header.\n\n```\nX-API-Key: dk_your_api_key\n```\n\nGet your free API key by creating an account at /register.\n\n## Rate Limits\n- **Free tier**: 100 requests per hour\n- **Max file size**: 10MB\n\nRate limit headers are included in every response:\n```\nX-RateLimit-Limit: 100\nX-RateLimit-Remaining: 99\nX-RateLimit-Reset: 1700000000\n```\n\n## Document Retention\nDocuments are retained for 24 hours for download purposes, then automatically and permanently purged.",
     "contact": {
       "name": "BRAMKAS INC",
       "url": "https://www.bramkas.com",
@@ -11,7 +11,7 @@
     },
     "license": {
       "name": "Proprietary",
-      "url": "https://dockonvert.com/terms"
+      "url": "https://dockonvert-api-183804826232.us-central1.run.app/terms"
     }
   },
   "servers": [
@@ -20,7 +20,7 @@
       "description": "Local Development"
     },
     {
-      "url": "https://api.dockonvert.com/api",
+      "url": "https://dockonvert-api-183804826232.us-central1.run.app/api",
       "description": "Production"
     }
   ],

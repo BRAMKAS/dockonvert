@@ -54,7 +54,7 @@ export default function HomePage() {
                 <span className="ml-2">Convert to Markdown</span>
               </div>
               <pre className="overflow-x-auto font-mono">
-{`curl -X POST https://api.dockonvert.com/v1/convert/markdown \\
+{`curl -X POST ${process.env.NEXT_PUBLIC_API_URL || "https://api.dockonvert.com"}/v1/convert/markdown \\
   -H "X-API-Key: dk_your_api_key" \\
   -F "file=@document.pdf"`}
               </pre>

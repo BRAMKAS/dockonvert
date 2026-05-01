@@ -46,9 +46,9 @@ uvicorn app.main:app --reload --port 8000
 docker compose up
 ```
 
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/api/docs
+- Frontend: http://localhost:3009
+- API: http://localhost:8009
+- API Docs: http://localhost:8009/api/docs
 
 ## API Endpoints
 
